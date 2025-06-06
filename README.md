@@ -1,2 +1,2 @@
 DropBox Clone  
-Next.Js 15, Drizzle ORM, Neon DB, Clerk auth
+Next.Js 15, Drizzle ORM, Neon DB, Clerk, Zod
