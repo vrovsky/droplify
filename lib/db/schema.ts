@@ -23,7 +23,7 @@ export const filesTable = pgTable("files", {
 
   ///pwnership info
   userId: text("user_id").notNull(),
-  parentId: uuid("parent_id").notNull(),
+  parentId: uuid("parent_id"),
 
   // file/folder flags
   isFolder: boolean("is_folder").default(false).notNull(),

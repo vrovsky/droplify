@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { filesRelations, filesTable } from "@/lib/db/schema";
-import { uuid } from "drizzle-orm/pg-core";
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,7 +32,7 @@ export async function POST(request: NextRequest) {
       fileUrl: imagekit.url,
       thumbnailUrl: imagekit.thumbnailUrl || null,
       userId: userId,
-      parentId: uuid().toString(),
+      parentId: null,
       isFolder: false,
       isStarred: false,
       isTrash: false,
