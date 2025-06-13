@@ -58,5 +58,40 @@ export async function POST(requet: NextRequest) {
 
     const buffer = await file.arrayBuffer();
     const fileBuffer = Buffer.from(buffer);
-  } catch (error: any) {}
+
+    const folderPath = parentId
+      ? `/droplify/${userId}/folder/${parentId}`
+      : `/droplify/${userId}`;
+
+    const originalFilename = file.name;
+    const fileExtension = originalFilename.split(".").pop() || "";
+    const uniqueFilename = `${uuidv4()}.${fileExtension}}`;
+    const uploadResponse = await imagekit.upload({
+      file: fileBuffer,
+      fileName: uniqueFilename,
+      folder: folderPath,
+      useUniqueFileName: true,
+    });
+
+    const fileDate = {
+      name: originalFilename,
+      path: uploadResponse.filePath,
+      size: file.size,
+      type: file.type,
+      fileUrl: uploadResponse.url,
+      thumbnailUrl: uploadResponse.thumbnailUrl || null,
+      userId: userId,
+      parentId: parentId,
+      isFolder: false,
+      isStarred: false,
+      isTrash: false,
+    };
+    const [newFile] = await db.insert(filesTable).values(fileDate).returning();
+    return NextResponse.json(newFile);
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: "Failed to upload file" },
+      { status: 401 }
+    );
+  }
 }
