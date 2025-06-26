@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { db } from "@/lib/db";
-import { filesTable } from "@/lib/db/schema";
+import { db } from "@/db";
+import { files } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import ImageKit from "imagekit";
 
@@ -31,15 +31,17 @@ export async function DELETE(
       );
     }
 
+    // Get the file to be deleted
     const [file] = await db
       .select()
-      .from(filesTable)
-      .where(and(eq(filesTable.id, fileId), eq(filesTable.userId, userId)));
+      .from(files)
+      .where(and(eq(files.id, fileId), eq(files.userId, userId)));
 
     if (!file) {
       return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
 
+    // Delete file from ImageKit if it's not a folder
     if (!file.isFolder) {
       try {
         let imagekitFileId = null;
@@ -60,11 +62,7 @@ export async function DELETE(
               limit: 1,
             });
 
-            if (
-              searchResults &&
-              searchResults.length > 0 &&
-              "fileId" in searchResults[0]
-            ) {
+            if (searchResults && searchResults.length > 0) {
               await imagekit.deleteFile(searchResults[0].fileId);
             } else {
               await imagekit.deleteFile(imagekitFileId);
@@ -79,9 +77,10 @@ export async function DELETE(
       }
     }
 
+    // Delete file from database
     const [deletedFile] = await db
-      .delete(filesTable)
-      .where(and(eq(filesTable.id, fileId), eq(filesTable.userId, userId)))
+      .delete(files)
+      .where(and(eq(files.id, fileId), eq(files.userId, userId)))
       .returning();
 
     return NextResponse.json({

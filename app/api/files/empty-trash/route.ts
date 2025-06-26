@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { db } from "@/lib/db";
-import { filesTable } from "@/lib/db/schema";
+import { db } from "@/db";
+import { files } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import ImageKit from "imagekit";
 
+// Initialize ImageKit with your credentials
 const imagekit = new ImageKit({
   publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY || "",
   privateKey: process.env.IMAGEKIT_PRIVATE_KEY || "",
@@ -18,10 +19,11 @@ export async function DELETE() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Get all files in trash for this user
     const trashedFiles = await db
       .select()
-      .from(filesTable)
-      .where(and(eq(filesTable.userId, userId), eq(filesTable.isTrash, true)));
+      .from(files)
+      .where(and(eq(files.userId, userId), eq(files.isTrash, true)));
 
     if (trashedFiles.length === 0) {
       return NextResponse.json(
@@ -30,6 +32,7 @@ export async function DELETE() {
       );
     }
 
+    // Delete files from ImageKit
     const deletePromises = trashedFiles
       .filter((file) => !file.isFolder) // Skip folders
       .map(async (file) => {
@@ -52,11 +55,7 @@ export async function DELETE() {
                 limit: 1,
               });
 
-              if (
-                searchResults &&
-                searchResults.length > 0 &&
-                "fileId" in searchResults[0]
-              ) {
+              if (searchResults && searchResults.length > 0) {
                 await imagekit.deleteFile(searchResults[0].fileId);
               } else {
                 await imagekit.deleteFile(imagekitFileId);
@@ -74,11 +73,13 @@ export async function DELETE() {
         }
       });
 
+    // Wait for all ImageKit deletions to complete (or fail)
     await Promise.allSettled(deletePromises);
 
+    // Delete all trashed files from the database
     const deletedFiles = await db
-      .delete(filesTable)
-      .where(and(eq(filesTable.userId, userId), eq(filesTable.isTrash, true)))
+      .delete(files)
+      .where(and(eq(files.userId, userId), eq(files.isTrash, true)))
       .returning();
 
     return NextResponse.json({

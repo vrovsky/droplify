@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { db } from "@/lib/db";
-import { filesTable } from "@/lib/db/schema";
+import { db } from "@/db";
+import { files } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
 export async function PATCH(
@@ -22,10 +22,11 @@ export async function PATCH(
       );
     }
 
+    // Get the current file
     const [file] = await db
       .select()
-      .from(filesTable)
-      .where(and(eq(filesTable.id, fileId), eq(filesTable.userId, userId)));
+      .from(files)
+      .where(and(eq(files.id, fileId), eq(files.userId, userId)));
 
     if (!file) {
       return NextResponse.json({ error: "File not found" }, { status: 404 });
@@ -33,9 +34,9 @@ export async function PATCH(
 
     // Toggle the isTrash status (move to trash or restore)
     const [updatedFile] = await db
-      .update(filesTable)
+      .update(files)
       .set({ isTrash: !file.isTrash })
-      .where(and(eq(filesTable.id, fileId), eq(filesTable.userId, userId)))
+      .where(and(eq(files.id, fileId), eq(files.userId, userId)))
       .returning();
 
     const action = updatedFile.isTrash ? "moved to trash" : "restored";
